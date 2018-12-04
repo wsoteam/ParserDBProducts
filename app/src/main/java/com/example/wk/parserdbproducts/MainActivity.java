@@ -46,7 +46,9 @@ public class MainActivity extends AppCompatActivity {
     static RecyclerView recyclerView;
     ItemAdapter itemAdapter;
     private StorageReference mStorageRef;
+    private StorageReference ref;
     ImageView imageView;
+
 
     static String url = "http://www.calorizator.ru/product/pix?page=1";
     static int firstElement = 12;
@@ -65,52 +67,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         recyclerView = findViewById(R.id.rv);
 
-
-
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mStorageRef = FirebaseStorage.getInstance().getReference();
-        URL url;
-        InputStream inputStream;
-        try {
-            Toast.makeText(MainActivity.this, "LOL HZ", Toast.LENGTH_SHORT).show();
-            url = new URL("http://www.calorizator.ru/sites/default/files/imagecache/product_96/product/ice-cone-burger-king.jpg");
-            inputStream = url.openStream();
-
-            UploadTask uploadTask = mStorageRef.child("images/1.jpg").putStream(inputStream);
-            uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                    Uri downloadUrl = taskSnapshot.getDownloadUrl();
-                    Intent intent = new Intent(Intent.ACTION_SEND);
-                    intent.setType("text/plain");
-                    intent.putExtra(Intent.EXTRA_TEXT, downloadUrl.toString());
-                    startActivity(intent);
-                }
-            });
-
-            /*mStorageRef.putStream(inputStream).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                    Uri downloadUrl = taskSnapshot.getDownloadUrl();
-                    Intent intent = new Intent(Intent.ACTION_SEND);
-                    intent.setType("text/plain");
-                    intent.putExtra(Intent.EXTRA_TEXT, downloadUrl.toString());
-                    startActivity(intent);
-
-                }
-            }).addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-                    Log.e("LOL", e.getLocalizedMessage());
-                }
-            });*/
-        } catch (Exception e) {
-
-        }
-
-
-
-
+        new AsyncLoadUrl().execute();
 
         /*AsyncLoad asyncLoad = new AsyncLoad();
         asyncLoad.execute();
@@ -229,5 +186,35 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+    }
+
+    public static class AsyncLoadUrl extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+                InputStream inputStream = new URL("http://www.calorizator.ru/sites/default/files/imagecache/product_96/product/hot-brownie-burger-king.jpg")
+                        .openStream();
+                FirebaseStorage storage = FirebaseStorage.getInstance();
+                StorageReference mStorageRef = storage.getReference();
+                StorageReference ref = mStorageRef.child("images/myimages/test.jpg");
+                UploadTask uploadTask = ref.putStream(inputStream);
+                uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                    @Override
+                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+
+                    }
+                });
+            } catch (Exception e) {
+                Log.e("LOL", e.getMessage());
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void is) {
+            super.onPostExecute(is);
+
+
+        }
     }
 }
