@@ -1,30 +1,25 @@
 package com.example.wk.parserdbproducts;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Handler;
-import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.bumptech.glide.Glide;
+import com.example.wk.parserdbproducts.POJOForSaveIRL.OneItem;
 import com.example.wk.parserdbproducts.POJOS.GroupOfFood;
 import com.example.wk.parserdbproducts.POJOS.ItemOfGlobalBase;
-import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -34,31 +29,24 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
     static RecyclerView recyclerView;
-    ItemAdapter itemAdapter;
-    private StorageReference mStorageRef;
-    private StorageReference ref;
-    ImageView imageView;
 
-
-    static String url = "http://www.calorizator.ru/product/pix?page=1";
-    static int firstElement = 12;
-    static int lastElement = 176;
+    static String url = "http://www.calorizator.ru/product/pix?page=7";
+    static int firstElement = 0;
+    static int lastElement = 97;
     static String USER_AGENT = "Mozilla";
     static String TAG_DIV = "</div>";
-    /*static String TAG_OF_KCAL = "field field-type-number-decimal field-field-kcal";
-    static String TAG_OF_PROTEIN = "field field-type-number-decimal field-field-kcal";
-    static String TAG_OF_KCAL = "field field-type-number-decimal field-field-kcal";
-    static String TAG_OF_KCAL = "field field-type-number-decimal field-field-kcal";*/
+    static String NAME_OF_GROUP = "Молочные продукты";
+    String NAME_OF_ENTITY = "17";
+
+    ArrayList<ItemOfGlobalBase> globalBases;
+    ArrayList<ItemOfGlobalBase> globalBasesWithPreparedLinks;
 
 
     @Override
@@ -67,25 +55,55 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         recyclerView = findViewById(R.id.rv);
 
-        new AsyncLoadUrl().execute();
+        readAndWrite();
+        //readLocalDB();
 
-        /*AsyncLoad asyncLoad = new AsyncLoad();
+
+    }
+
+    private void readLocalDB() {
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference myRef = database.getReference(NAME_OF_ENTITY);
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String s = dataSnapshot.getValue(GroupOfFood.class).getListOfFoodItems().get(0).getCalories();
+                String[] strings = s.split(" ");
+                int i = Integer.parseInt(strings[1]) + 100;
+                Toast.makeText(MainActivity.this, String.valueOf(Integer.parseInt(strings[1])), Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void readAndWrite() {
+        AsyncLoad asyncLoad = new AsyncLoad();
         asyncLoad.execute();
         try {
-            ArrayList<ItemOfGlobalBase> globalBases = asyncLoad.get();
-            recyclerView.setAdapter(new ItemAdapter(globalBases));
-
-
+            globalBases = asyncLoad.get();
+            Toast.makeText(this, "Loaded all data. Start to rewrite DB", Toast.LENGTH_SHORT).show();
+            Log.i("LOL", "Loaded all data. Start to rewrite DB");
+            AsyncLoadUrl asyncLoadUrl = new AsyncLoadUrl();
+            asyncLoadUrl.execute();
+            globalBasesWithPreparedLinks = asyncLoadUrl.get();
 
             FirebaseDatabase database = FirebaseDatabase.getInstance();
-            DatabaseReference myRef = database.getReference("5");
-            myRef.setValue(new GroupOfFood("Бургер Кинг", globalBases, "url"));
+            DatabaseReference myRef = database.getReference(NAME_OF_ENTITY);
+            myRef.setValue(new GroupOfFood(NAME_OF_GROUP, globalBasesWithPreparedLinks, "url"));
+
+
+            FirebaseDatabase databaseForSaveIRL = FirebaseDatabase.getInstance();
+            DatabaseReference myRefForSaveIRL = databaseForSaveIRL.getReference("a" + NAME_OF_ENTITY);
+            myRefForSaveIRL.setValue(new OneItem(NAME_OF_GROUP, String.valueOf(firstElement), String.valueOf(lastElement), url));
         } catch (ExecutionException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }*/
-
+        }
     }
 
     public class ItemHolder extends RecyclerView.ViewHolder {
@@ -145,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
     public static class AsyncLoad extends AsyncTask<Void, Void, ArrayList<ItemOfGlobalBase>> {
         @Override
         protected ArrayList<ItemOfGlobalBase> doInBackground(Void... voids) {
-            String kcal, prot, fat, carbo, title, desc, properties, composition;
+            String kcal, prot, fat, carbo, title, desc, properties, composition, urlForLoadImageRaw;
             ArrayList<ItemOfGlobalBase> globalBases = new ArrayList<>();
             try {
                 Document doc = Jsoup.connect(url).userAgent(USER_AGENT).get();
@@ -162,6 +180,7 @@ public class MainActivity extends AppCompatActivity {
 
                     Elements allMainText = docDetail.select("p");
 
+                    urlForLoadImageRaw = tempArray[7];
                     kcal = elementsDetail.get(1).html().split(TAG_DIV)[1];
                     prot = elementsDetail.get(2).html().split(TAG_DIV)[1];
                     fat = elementsDetail.get(3).html().split(TAG_DIV)[1];
@@ -171,10 +190,12 @@ public class MainActivity extends AppCompatActivity {
                     composition = allMainText.get(2).ownText(); // short description - not supported
                     properties = allMainText.get(1).ownText(); // kcal
 
-                    globalBases.add(new ItemOfGlobalBase(title, desc, composition, properties, kcal, prot, fat, carbo, "url"));
+
+                    globalBases.add(new ItemOfGlobalBase(title, desc, composition, properties, kcal, prot, fat, carbo, urlForLoadImageRaw));
+                    Log.i("LOL", String.valueOf(i) + " загружен с сайта.");
                 }
                 return globalBases;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 return null;
             }
 
@@ -188,31 +209,54 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public static class AsyncLoadUrl extends AsyncTask<Void, Void, Void> {
+    public class AsyncLoadUrl extends AsyncTask<Void, Void, ArrayList<ItemOfGlobalBase>> {
         @Override
-        protected Void doInBackground(Void... voids) {
-            try {
-                InputStream inputStream = new URL("http://www.calorizator.ru/sites/default/files/imagecache/product_96/product/hot-brownie-burger-king.jpg")
-                        .openStream();
-                FirebaseStorage storage = FirebaseStorage.getInstance();
-                StorageReference mStorageRef = storage.getReference();
-                StorageReference ref = mStorageRef.child("images/myimages/test.jpg");
-                UploadTask uploadTask = ref.putStream(inputStream);
-                uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                    @Override
-                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+        protected ArrayList<ItemOfGlobalBase> doInBackground(Void... voids) {
+            ArrayList<ItemOfGlobalBase> preparedArray = new ArrayList<>();
+            for (int i = 0; i < globalBases.size(); i++) {
+                try {
+                    ItemOfGlobalBase rewriteItemOfGB = new ItemOfGlobalBase();
+                    InputStream inputStream
+                            = new URL(globalBases.get(i).getUrl_of_images())
+                            .openStream();
+                    FirebaseStorage storage = FirebaseStorage.getInstance();
+                    StorageReference mStorageRef = storage.getReference();
+                    StorageReference ref = mStorageRef.child("images/" + NAME_OF_GROUP + "/" + globalBases.get(i).getName().replace("/", "-") + ".jpg");
+                    UploadTask uploadTask = ref.putStream(inputStream);
+                    uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
 
+                        }
+                    });
+
+                    while (!uploadTask.isSuccessful()) {
+                        Log.i("LOL", "Ждем, пишем " + String.valueOf(i) + "-й элемент");
                     }
-                });
-            } catch (Exception e) {
-                Log.e("LOL", e.getMessage());
+
+                    rewriteItemOfGB.setUrl_of_images(uploadTask.getSnapshot().getDownloadUrl().toString());
+                    rewriteItemOfGB.setName(globalBases.get(i).getName());
+                    rewriteItemOfGB.setComposition(globalBases.get(i).getComposition());
+                    rewriteItemOfGB.setDescription(globalBases.get(i).getDescription());
+                    rewriteItemOfGB.setProperties(globalBases.get(i).getProperties());
+                    rewriteItemOfGB.setCalories(globalBases.get(i).getCalories());
+                    rewriteItemOfGB.setCarbohydrates(globalBases.get(i).getCarbohydrates());
+                    rewriteItemOfGB.setFat(globalBases.get(i).getFat());
+                    rewriteItemOfGB.setProtein(globalBases.get(i).getProtein());
+                    preparedArray.add(rewriteItemOfGB);
+                    Log.i("LOL", String.valueOf(i) + " загружен в хранилище и добавлен в массив");
+
+
+                } catch (Exception e) {
+                    Log.e("LOL", e.getMessage());
+                }
             }
-            return null;
+            return preparedArray;
         }
 
         @Override
-        protected void onPostExecute(Void is) {
-            super.onPostExecute(is);
+        protected void onPostExecute(ArrayList<ItemOfGlobalBase> array) {
+            super.onPostExecute(array);
 
 
         }
