@@ -37,13 +37,13 @@ import java.util.concurrent.ExecutionException;
 public class MainActivity extends AppCompatActivity {
     static RecyclerView recyclerView;
 
-    static String url = "http://www.calorizator.ru/product/pix?page=7";
+    static String url = "http://www.calorizator.ru/product/pix?page=26";
     static int firstElement = 0;
-    static int lastElement = 97;
+    static int lastElement = 70;
     static String USER_AGENT = "Mozilla";
     static String TAG_DIV = "</div>";
-    static String NAME_OF_GROUP = "Молочные продукты";
-    String NAME_OF_ENTITY = "17";
+    static String NAME_OF_GROUP = "Японская кухня";
+    String NAME_OF_ENTITY = "60";
 
     ArrayList<ItemOfGlobalBase> globalBases;
     ArrayList<ItemOfGlobalBase> globalBasesWithPreparedLinks;
@@ -184,12 +184,24 @@ public class MainActivity extends AppCompatActivity {
                     kcal = elementsDetail.get(1).html().split(TAG_DIV)[1];
                     prot = elementsDetail.get(2).html().split(TAG_DIV)[1];
                     fat = elementsDetail.get(3).html().split(TAG_DIV)[1];
-                    carbo = elementsDetail.get(4).html().split(TAG_DIV)[1];
+                    if (elementsDetail.size() >= 5) {
+                        carbo = elementsDetail.get(4).html().split(TAG_DIV)[1];
+                    }else {
+                        carbo = "";
+                    }
                     title = docDetail.select("h1").get(0).html();
-                    desc = allMainText.get(0).ownText(); // only description - not supported
-                    composition = allMainText.get(2).ownText(); // short description - not supported
-                    properties = allMainText.get(1).ownText(); // kcal
+                    desc = allMainText.get(0).ownText();
+                    if (allMainText.size() >= 2) {
+                        properties = allMainText.get(1).ownText();
+                    }else {
+                        properties = "";
+                    }
 
+                    if (allMainText.size() >= 3) {
+                        composition = allMainText.get(2).ownText();
+                    }else {
+                        composition = "";
+                    }
 
                     globalBases.add(new ItemOfGlobalBase(title, desc, composition, properties, kcal, prot, fat, carbo, urlForLoadImageRaw));
                     Log.i("LOL", String.valueOf(i) + " загружен с сайта.");
