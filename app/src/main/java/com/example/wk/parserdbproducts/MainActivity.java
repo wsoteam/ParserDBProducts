@@ -4,16 +4,23 @@ import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.example.wk.parserdbproducts.POJOForSaveIRL.OneItem;
 import com.example.wk.parserdbproducts.POJOS.GroupOfFood;
 import com.example.wk.parserdbproducts.POJOS.ItemOfGlobalBase;
+import com.example.wk.parserdbproducts.POJOS.ListOfGroupsFood;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -36,6 +43,8 @@ import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
     static RecyclerView recyclerView;
+    private Button btnLoad, btnShow;
+    private EditText editText;
 
     static String url = "http://www.calorizator.ru/product/pix?page=26";
     static int firstElement = 0;
@@ -48,29 +57,34 @@ public class MainActivity extends AppCompatActivity {
     ArrayList<ItemOfGlobalBase> globalBases;
     ArrayList<ItemOfGlobalBase> globalBasesWithPreparedLinks;
 
+    ArrayList<GroupOfFood> allItems = new ArrayList<>();
+    ArrayList<ListOfGroupsFood> list = new ArrayList<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         recyclerView = findViewById(R.id.rv);
+        btnLoad = findViewById(R.id.btn);
+        btnShow = findViewById(R.id.btnShow);
+        editText = findViewById(R.id.edt);
+        allItems = new ArrayList<>();
 
-        readAndWrite();
-        //readLocalDB();
+        btnLoad.setVisibility(View.GONE);
+        btnShow.setVisibility(View.GONE);
+        editText.setVisibility(View.GONE);
 
-
-    }
-
-    private void readLocalDB() {
+        //readAndWrite();
         FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference myRef = database.getReference(NAME_OF_ENTITY);
+        DatabaseReference myRef = database.getReference("dbAnalyzer");
+
         myRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                String s = dataSnapshot.getValue(GroupOfFood.class).getListOfFoodItems().get(0).getCalories();
-                String[] strings = s.split(" ");
-                int i = Integer.parseInt(strings[1]) + 100;
-                Toast.makeText(MainActivity.this, String.valueOf(Integer.parseInt(strings[1])), Toast.LENGTH_SHORT).show();
+                list.add(dataSnapshot.getValue(ListOfGroupsFood.class));
+                recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                recyclerView.setAdapter(new ItemAdapter(fillItemsList(list.get(0))));
             }
 
             @Override
@@ -78,6 +92,125 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
+        btnLoad.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                readWithNullElementsAndSaveInLocaleList("1");
+                //editText.setText(String.valueOf(Integer.parseInt(editText.getText().toString()) + 1));
+            }
+        });
+        btnShow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                /*btnLoad.setVisibility(View.GONE);
+                btnShow.setVisibility(View.GONE);
+                editText.setVisibility(View.GONE);
+
+                recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                recyclerView.setAdapter(new ItemAdapter((ArrayList<ItemOfGlobalBase>) allItems.get(0).getListOfFoodItems()));*/
+                FirebaseDatabase database = FirebaseDatabase.getInstance();
+                DatabaseReference myRef = database.getReference("dbAnalyzer");
+
+                ListOfGroupsFood listOfGroupsFood = new ListOfGroupsFood("dbAnalyzer", allItems);
+                myRef.setValue(list.get(1));
+                Log.e("LOL", "added to fb");
+
+            }
+        });
+
+
+    }
+
+    private ArrayList<ItemOfGlobalBase> fillItemsList(ListOfGroupsFood listOfGroupsFood) {
+        ItemOfGlobalBase itemForGroupNaming;
+        ArrayList<ItemOfGlobalBase> items = new ArrayList<>();
+        for (int i = 0; i < listOfGroupsFood.getListOfGroupsOfFood().size(); i++) {
+            itemForGroupNaming = new ItemOfGlobalBase(listOfGroupsFood.getListOfGroupsOfFood().get(i).getName(),
+                    "0", "0", "0", "0",
+                    "0", "0", "0","0");
+
+            items.add(itemForGroupNaming);
+            ItemOfGlobalBase itemOfGlobalBaseForWriting;
+            for (int j = 0; j < listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().size(); j++) {
+                itemOfGlobalBaseForWriting = listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(j);
+                items.add(itemOfGlobalBaseForWriting);
+            }
+
+        }
+        Log.e("LOL", String.valueOf(items.size()));
+        return items;
+    }
+
+    private void readWithNullElementsAndSaveInLocaleList(final String number) {
+
+        Log.e("LOL", "Start");
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+
+        DatabaseReference myRef = database.getReference("analyzer");
+        myRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                list.add(dataSnapshot.getValue(ListOfGroupsFood.class));
+                String i = list.get(0).getListOfGroupsOfFood().get(0).getListOfFoodItems().get(0).getFat().split(" ")[1];
+                Log.e("LOL", "Base loaded");
+
+                ListOfGroupsFood newListOfGroupsFood = new ListOfGroupsFood();
+                ListOfGroupsFood oldListOfGroupsFood = list.get(0);
+                ArrayList<GroupOfFood> newListOfGroupFoodForWrite = new ArrayList<>();
+                for (int j = 0; j < list.get(0).getListOfGroupsOfFood().size(); j++) {
+                    GroupOfFood oldGroupOfFood = list.get(0).getListOfGroupsOfFood().get(j);
+                    GroupOfFood newGroupOfFood = new GroupOfFood();
+                    ArrayList<ItemOfGlobalBase> listOfItemsForWrite = new ArrayList<>();
+
+                    for (int k = 0; k < list.get(0).getListOfGroupsOfFood().get(j).getListOfFoodItems().size(); k++) {
+                        ItemOfGlobalBase oldItem = list.get(0).getListOfGroupsOfFood().get(j).getListOfFoodItems().get(k);
+                        ItemOfGlobalBase newItem = new ItemOfGlobalBase();
+                        newItem.setName(oldItem.getName());
+                        newItem.setDescription(oldItem.getDescription());
+                        newItem.setComposition(oldItem.getComposition());
+                        newItem.setProperties(oldItem.getProperties());
+                        newItem.setUrl_of_images(oldItem.getUrl_of_images());
+
+                        newItem.setCalories(oldItem.getCalories().split(" ")[1]);
+
+                        newItem.setProtein(oldItem.getProtein().split(" ")[1]);
+
+                        newItem.setFat(oldItem.getFat().split(" ")[1]);
+                        if (oldItem.getCarbohydrates().split(" ").length != 1) {
+                            newItem.setCarbohydrates(oldItem.getCarbohydrates().split(" ")[1]);
+                        } else {
+                            newItem.setCarbohydrates("0");
+                        }
+                        double cal = Double.parseDouble(newItem.getCalories());
+                        double prot = Double.parseDouble(newItem.getProtein());
+                        double fat = Double.parseDouble(newItem.getFat());
+                        double car = Double.parseDouble(newItem.getCarbohydrates());
+
+                        listOfItemsForWrite.add(newItem);
+                    }
+
+                    newGroupOfFood.setName(oldGroupOfFood.getName());
+                    newGroupOfFood.setUrl_of_image(oldGroupOfFood.getUrl_of_image());
+                    newGroupOfFood.setListOfFoodItems(listOfItemsForWrite);
+
+                    Log.e("LOL", newGroupOfFood.getName() + "   "
+                            + newListOfGroupFoodForWrite.size() + "size -- "
+                            + String.valueOf(listOfItemsForWrite.size()));
+                    newListOfGroupFoodForWrite.add(newGroupOfFood);
+                }
+                newListOfGroupsFood.setName("dbAnalyzer");
+                newListOfGroupsFood.setListOfGroupsOfFood(newListOfGroupFoodForWrite);
+                list.add(newListOfGroupsFood);
+                Log.e("LOL", "DB added to LIST");
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+
     }
 
     private void readAndWrite() {
@@ -107,39 +240,45 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class ItemHolder extends RecyclerView.ViewHolder {
-        private TextView tvName, tvDesc, tvComposition, tvProp, tvCal, tvProt, tvFat, tvCarbo, tvUrl;
+        private TextView tvName, tvCal, tvProt, tvFat, tvCarbo, tvNumber;
+        private ImageView ivMainImage;
 
         public ItemHolder(LayoutInflater layoutInflater, ViewGroup viewGroup) {
             super(layoutInflater.inflate(R.layout.item, viewGroup, false));
             tvName = itemView.findViewById(R.id.tvName);
-            tvDesc = itemView.findViewById(R.id.tvDescription);
-            tvComposition = itemView.findViewById(R.id.tvComposition);
-            tvProp = itemView.findViewById(R.id.tvProperties);
             tvCal = itemView.findViewById(R.id.tvCal);
             tvProt = itemView.findViewById(R.id.tvProtein);
             tvFat = itemView.findViewById(R.id.tvFat);
             tvCarbo = itemView.findViewById(R.id.tvCarbohydrates);
-            tvUrl = itemView.findViewById(R.id.tvUrl);
+            tvNumber = itemView.findViewById(R.id.tvNumber);
+            ivMainImage = itemView.findViewById(R.id.ivImage);
         }
 
-        public void bind(ItemOfGlobalBase itemOfGlobalBase) {
-            tvName.setText(itemOfGlobalBase.getName());
-            tvDesc.setText(itemOfGlobalBase.getDescription());
-            tvComposition.setText(itemOfGlobalBase.getComposition());
-            tvProp.setText(itemOfGlobalBase.getProperties());
-            tvCal.setText(itemOfGlobalBase.getCalories());
-            tvProt.setText(itemOfGlobalBase.getProtein());
-            tvFat.setText(itemOfGlobalBase.getFat());
-            tvCarbo.setText(itemOfGlobalBase.getCarbohydrates());
-            tvUrl.setText(itemOfGlobalBase.getUrl_of_images());
+        public void bind(ItemOfGlobalBase itemOfGlobalBase, boolean isItemForSeparator) {
+            if (isItemForSeparator){
+                tvCal.setVisibility(View.GONE);
+                tvProt.setVisibility(View.GONE);
+                tvFat.setVisibility(View.GONE);
+                tvCarbo.setVisibility(View.GONE);
+                tvName.setText(itemOfGlobalBase.getName());
+            }else {
+                tvName.setText(itemOfGlobalBase.getName());
+                tvCal.setText(itemOfGlobalBase.getCalories());
+                tvProt.setText(itemOfGlobalBase.getProtein());
+                tvFat.setText(itemOfGlobalBase.getFat());
+                tvCarbo.setText(itemOfGlobalBase.getCarbohydrates());
+                tvNumber.setText(String.valueOf(getAdapterPosition()));
+                Glide.with(MainActivity.this).load(itemOfGlobalBase.getUrl_of_images()).into(ivMainImage);
+            }
+
         }
     }
 
     public class ItemAdapter extends RecyclerView.Adapter<ItemHolder> {
-        ArrayList<ItemOfGlobalBase> globalBases;
+        ArrayList<ItemOfGlobalBase> itemsOfGlobalBases;
 
-        public ItemAdapter(ArrayList<ItemOfGlobalBase> globalBases) {
-            this.globalBases = globalBases;
+        public ItemAdapter(ArrayList<ItemOfGlobalBase> itemsOfGlobalBases) {
+            this.itemsOfGlobalBases = itemsOfGlobalBases;
         }
 
         @NonNull
@@ -151,12 +290,17 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(@NonNull ItemHolder holder, int position) {
-            holder.bind(globalBases.get(position));
+            if (itemsOfGlobalBases.get(position).getUrl_of_images().equals(null)){
+                holder.bind(itemsOfGlobalBases.get(position), true);
+            }else {
+                holder.bind(itemsOfGlobalBases.get(position), false);
+            }
+
         }
 
         @Override
         public int getItemCount() {
-            return globalBases.size();
+            return itemsOfGlobalBases.size();
         }
     }
 
@@ -186,20 +330,20 @@ public class MainActivity extends AppCompatActivity {
                     fat = elementsDetail.get(3).html().split(TAG_DIV)[1];
                     if (elementsDetail.size() >= 5) {
                         carbo = elementsDetail.get(4).html().split(TAG_DIV)[1];
-                    }else {
+                    } else {
                         carbo = "";
                     }
                     title = docDetail.select("h1").get(0).html();
                     desc = allMainText.get(0).ownText();
                     if (allMainText.size() >= 2) {
                         properties = allMainText.get(1).ownText();
-                    }else {
+                    } else {
                         properties = "";
                     }
 
                     if (allMainText.size() >= 3) {
                         composition = allMainText.get(2).ownText();
-                    }else {
+                    } else {
                         composition = "";
                     }
 
