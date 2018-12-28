@@ -126,11 +126,11 @@ public class MainActivity extends AppCompatActivity {
         ItemOfGlobalBase itemForGroupNaming;
         ArrayList<ItemOfGlobalBase> items = new ArrayList<>();
         for (int i = 0; i < listOfGroupsFood.getListOfGroupsOfFood().size(); i++) {
-            itemForGroupNaming = new ItemOfGlobalBase(listOfGroupsFood.getListOfGroupsOfFood().get(i).getName(),
+            /*itemForGroupNaming = new ItemOfGlobalBase(listOfGroupsFood.getListOfGroupsOfFood().get(i).getName(),
                     "0", "0", "0", "0",
-                    "0", "0", "0","0");
+                    "0", "0", "0","0");*/
 
-            items.add(itemForGroupNaming);
+            /*items.add(itemForGroupNaming);*/
             ItemOfGlobalBase itemOfGlobalBaseForWriting;
             for (int j = 0; j < listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().size(); j++) {
                 itemOfGlobalBaseForWriting = listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(j);
@@ -290,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(@NonNull ItemHolder holder, int position) {
-            if (itemsOfGlobalBases.get(position).getUrl_of_images().equals(null)){
+            if (itemsOfGlobalBases.get(position).getUrl_of_images().equals("0")){
                 holder.bind(itemsOfGlobalBases.get(position), true);
             }else {
                 holder.bind(itemsOfGlobalBases.get(position), false);
