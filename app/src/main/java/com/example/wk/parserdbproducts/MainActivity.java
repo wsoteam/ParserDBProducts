@@ -4,14 +4,11 @@ import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -36,15 +33,20 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
-    static RecyclerView recyclerView;
-    private Button btnLoad, btnShow;
-    private EditText editText;
+
+
+    private DatabaseReference mDatabase;
+    String TAG = "loadTest";
+    private ListOfGroupsFood listOfGroupsFood;
 
     static String url = "http://www.calorizator.ru/product/pix?page=26";
     static int firstElement = 0;
@@ -65,15 +67,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        recyclerView = findViewById(R.id.rv);
-        btnLoad = findViewById(R.id.btn);
-        btnShow = findViewById(R.id.btnShow);
-        editText = findViewById(R.id.edt);
+
         allItems = new ArrayList<>();
 
-        btnLoad.setVisibility(View.GONE);
-        btnShow.setVisibility(View.GONE);
-        editText.setVisibility(View.GONE);
+
 
         //readAndWrite();
         FirebaseDatabase database = FirebaseDatabase.getInstance();
@@ -82,9 +79,105 @@ public class MainActivity extends AppCompatActivity {
         myRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                list.add(dataSnapshot.getValue(ListOfGroupsFood.class));
-                recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
-                recyclerView.setAdapter(new ItemAdapter(fillItemsList(list.get(0))));
+
+               listOfGroupsFood = dataSnapshot.getValue(ListOfGroupsFood.class);
+
+
+                if (listOfGroupsFood == null){
+
+                    Log.d(TAG, "null");
+                } else {
+
+                    Log.d(TAG, "loaded!!!");
+                }
+
+                Log.d(TAG, String.valueOf(listOfGroupsFood.getListOfGroupsOfFood().size()));
+//                for (GroupOfFood food: listOfGroupsFood.getListOfGroupsOfFood()) {
+//                    Log.d(TAG, food.getName());
+//                }
+
+                String prim = "Многие почитатели сладкого любят побаловать себя нежным " +
+                        "шоколадным пирожным Брауни. Название  десерта происходит от английского" +
+                        " слова , что в переводе означает . Впервые Брауни было упомянуто в 1896 " +
+                        "году в кулинарной книге Фанни Фармер. Тогда  это название носили пирожные " +
+                        "из мелассы. Со временем в рецепт вносились дополнения и изменения и теперь " +
+                        "этот десерт может иметь как консистенцию торта, так и кекса или печенья. В " +
+                        "ресторанах быстрого питания среди десертов также есть пирожное Брауни. Тут " +
+                        "оно подается горячим или же с добавлением мороженого.";
+
+//                Log.d(TAG, cutX(prim));
+
+                int index = 0;
+
+               // listOfGroupsFood.getListOfGroupsOfFood().get(0).getListOfFoodItems().get(0).setDescription(cutX( listOfGroupsFood.getListOfGroupsOfFood().get(0).getListOfFoodItems().get(0).getDescription()));
+
+
+                for (int i = 0; i < listOfGroupsFood.getListOfGroupsOfFood().size() - 1; i++){
+
+
+                    for (int y = 0; y < listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().size() - 1; y++){
+
+                        String description = cutX(listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(y).getDescription());
+                        String composition = cutX(listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(y).getComposition());
+                        String properties = cutX(listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(y).getProperties());
+
+                        listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(y).setDescription(description);
+                        listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(y).setComposition(composition);
+                        listOfGroupsFood.getListOfGroupsOfFood().get(i).getListOfFoodItems().get(y).setProperties(properties);
+                    }
+
+                }
+
+
+                Log.d(TAG, listOfGroupsFood.getListOfGroupsOfFood().get(0).getListOfFoodItems().get(0).getDescription());
+
+//                for (GroupOfFood logf:
+//                        listOfGroupsFood.getListOfGroupsOfFood()) {
+//
+//                    for (ItemOfGlobalBase iogb:
+//                         logf.getListOfFoodItems()) {
+//
+//                        String description = iogb.getDescription();
+//                        String composition = iogb.getComposition();
+//                        String properties = iogb.getProperties();
+//
+//                        iogb.setDescription(cutX(description));
+//                        iogb.setComposition(cutX(composition));
+//                        iogb.setProperties(cutX(properties));
+//                        index++;
+//                    }
+//                }
+
+
+
+
+
+                Log.d(TAG, "index: " + index);
+                Log.d(TAG, "fINALLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL!!!");
+
+
+
+
+//                for (int i = 0; i < listOfGroupsFood.getListOfGroupsOfFood().size() - 1; i++){
+////                    Log.d(TAG, "FOR");
+//                    if (listOfGroupsFood.getListOfGroupsOfFood().get(i).getName().equals(listOfGroupsFood.getListOfGroupsOfFood().get(i + 1).getName()) ){
+//                        sum(listOfGroupsFood.getListOfGroupsOfFood().get(i), listOfGroupsFood.getListOfGroupsOfFood().get(i + 1));
+//                        listOfGroupsFood.getListOfGroupsOfFood().remove(i + 1);
+//                        i--;
+//                        Log.d(TAG, String.valueOf(listOfGroupsFood.getListOfGroupsOfFood().size()));
+//                    }
+//                }
+
+
+//                for (GroupOfFood food: listOfGroupsFood.getListOfGroupsOfFood()) {
+//                    Log.d(TAG, "+ " + food.getName());
+//                }
+
+//                Log.d(TAG, "poeben'" + String.valueOf(listOfGroupsFood.getListOfGroupsOfFood().get(listOfGroupsFood.getListOfGroupsOfFood().size()-1).getListOfFoodItems().size()));
+                saveinDB();
+
+
+                Log.d(TAG, "SAVE!!!");
             }
 
             @Override
@@ -93,34 +186,55 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        btnLoad.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                readWithNullElementsAndSaveInLocaleList("1");
-                //editText.setText(String.valueOf(Integer.parseInt(editText.getText().toString()) + 1));
-            }
-        });
-        btnShow.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                /*btnLoad.setVisibility(View.GONE);
-                btnShow.setVisibility(View.GONE);
-                editText.setVisibility(View.GONE);
-
-                recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
-                recyclerView.setAdapter(new ItemAdapter((ArrayList<ItemOfGlobalBase>) allItems.get(0).getListOfFoodItems()));*/
-                FirebaseDatabase database = FirebaseDatabase.getInstance();
-                DatabaseReference myRef = database.getReference("dbAnalyzer");
-
-                ListOfGroupsFood listOfGroupsFood = new ListOfGroupsFood("dbAnalyzer", allItems);
-                myRef.setValue(list.get(1));
-                Log.e("LOL", "added to fb");
-
-            }
-        });
 
 
     }
+
+    private String cutX(String text){
+
+        String regular = ".*\\s[,.!?\\s].*";
+
+        final String sentences[] = text.split("[.!?]\\s*");
+
+        String result = "";
+
+        for (String str:
+                sentences) {
+            str = str + ".";
+            if (str.matches(regular)){
+//                Log.d(TAG,"!!!!" + str);
+                return result;
+            } else {
+                result = result + str;
+            }
+
+        }
+
+//        for (String s:
+//                sentences) {
+//            Log.d(TAG, s);
+//        }
+
+        return result;
+    }
+
+
+    private void sum(GroupOfFood main, GroupOfFood second){
+
+        main.getListOfFoodItems().addAll(second.getListOfFoodItems());
+    }
+
+
+    private void saveinDB(){
+
+        mDatabase = FirebaseDatabase.getInstance().getReference();
+
+            mDatabase.child("dbAnalyzer").setValue(listOfGroupsFood);
+
+
+    }
+
+
 
     private ArrayList<ItemOfGlobalBase> fillItemsList(ListOfGroupsFood listOfGroupsFood) {
         ItemOfGlobalBase itemForGroupNaming;
